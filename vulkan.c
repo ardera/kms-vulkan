@@ -1392,8 +1392,8 @@ struct buffer *buffer_vk_create(struct device *device, struct output *output) {
         command_buffer,
         /* srcStageMask */ VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
         /* dstStageMask */ VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        /* dependencyFlags */0,
-        /* memoryBarrierCount */0,
+        /* dependencyFlags */ 0,
+        /* memoryBarrierCount */ 0,
         /* pMemoryBarriers */ NULL,
         /* bufferMemoryBarrierCount */ 0,
         /* pBufferMemoryBarriers */ NULL,
@@ -1816,12 +1816,6 @@ bool buffer_vk_fill(struct buffer *buffer, int frame_num) {
 
     if (img->buffer.render_fence_fd) {
         close(img->buffer.render_fence_fd);
-    }
-
-    res = vkWaitForFences(vk_dev->dev, 1, &img->render_fence, VK_TRUE, UINT64_MAX);
-    if (res != VK_SUCCESS) {
-        vk_error(res, "vkWaitForFences");
-        abort();
     }
 
     img->buffer.render_fence_fd = -1;
