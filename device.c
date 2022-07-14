@@ -328,8 +328,7 @@ err:
  * Enumerate all KMS devices and find one we can use; also set up our TTY for
  * graphics mode if we find one.
  */
-struct device *device_create(void)
-{
+struct device *device_create(void) {
 	struct device *ret;
 	drmDevicePtr *devices;
 	int num_devices;
@@ -366,11 +365,6 @@ struct device *device_create(void)
 	if (!ret) {
 		fprintf(stderr, "couldn't find any suitable KMS device\n");
 		goto err;
-	}
-
-	if (vt_setup(ret) != 0) {
-		fprintf(stderr, "couldn't set up VT for graphics mode\n");
-		goto err_dev;
 	}
 
 	return ret;
