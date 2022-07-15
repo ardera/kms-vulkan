@@ -294,11 +294,8 @@ static struct device *device_open(const char *filename)
 	const char* renderer = "software";
 	if (ret->gbm_device) {
 		renderer = "vulkan";
-		if (getenv("KMS_NO_VULKAN") || !vk_device_create(ret)) {
-			printf("Not using vulkan for rendering, trying gl\n");
-			renderer = "gl";
-			if (ret->gbm_device && !device_egl_setup(ret))
-				goto err_gbm;
+		if (!vk_device_create(ret)) {
+			abort();
 		}
 	}
 

@@ -47,12 +47,8 @@ void buffer_fill(struct buffer *buffer, int frame_num)
 	struct output *output = buffer->output;
 
 	if (buffer->gbm.bo) {
-		if (buffer->output->device->vk_device) {
-			// TODO: handle return value
-			buffer_vk_fill(buffer, frame_num);
-		} else {
-			buffer_egl_fill(buffer, frame_num);
-		}
+		// TODO: handle return value
+		buffer_vk_fill(buffer, frame_num);
 
 		return;
 	}
@@ -200,11 +196,7 @@ struct buffer *buffer_create(struct device *device, struct output *output)
 	int err;
 
 	if (device->gbm_device) {
-		if (device->vk_device) {
-			ret = buffer_vk_create(device, output);
-		} else {
-			ret = buffer_egl_create(device, output);
-		}
+		ret = buffer_vk_create(device, output);
 	} else {
 		ret = buffer_dumb_create(device, output);
 	}
@@ -284,11 +276,7 @@ void buffer_destroy(struct buffer *buffer)
 		munmap(buffer->dumb.mem, buffer->dumb.size);
 		drmIoctl(device->kms_fd, DRM_IOCTL_MODE_DESTROY_DUMB, &destroy);
 	} else if (buffer->gbm.bo) {
-		if (device->vk_device) {
-			buffer_vk_destroy(device, buffer);
-		} else {
-			buffer_egl_destroy(device, buffer);
-		}
+		buffer_vk_destroy(device, buffer);
 	}
 	free(buffer);
 }

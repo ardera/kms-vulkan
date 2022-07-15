@@ -300,11 +300,7 @@ int main(int argc, char *argv[])
 		int j;
 
 		if (device->gbm_device) {
-			if (device->vk_device) {
-				ret = output_vulkan_setup(output);
-			} else {
-				ret = output_egl_setup(output);
-			}
+			ret = output_vulkan_setup(output);
 
 			if (!ret) {
 				fprintf(stderr,

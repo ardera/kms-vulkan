@@ -1,0 +1,20 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "run kms-quads",
+            "type": "process",
+            "command": "${workspaceFolder}/build/kms-quads",
+            "options": {
+                "env": {
+                    "LD_PRELOAD": "/usr/lib/gcc/arm-linux-gnueabihf/10/libatomic.so",
+                    "VK_ICD_FILENAMES": "/home/pi/devel/mesa-install/share/vulkan/icd.d/broadcom_icd.armv7l.json",
+                    "VK_LAYER_PATH": "/home/pi/devel/Vulkan-ValidationLayers/build/layers"
+                }
+            },
+            "problemMatcher": []
+        }
+    ]
+}
