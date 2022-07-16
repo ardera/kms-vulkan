@@ -2064,8 +2064,6 @@ void vkkmscube_loop(struct vkkmscube *cube) {
 
     i = 0;
     while (1) {
-        LOG_DEBUG("update\n");
-        
         cube_gpu_buffer_update_transforms(cube->images[i].gpubuf, start_time, cube->height / (float) cube->width);
 
         vk_res = vkQueueSubmit(
