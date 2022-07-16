@@ -1912,26 +1912,26 @@ struct vkkmscube *vkkmscube_new() {
         return NULL;
     }
 
-    cube_pipeline = cube_pipeline_new(dev, 800, 480, vk_format);
-    if (cube_pipeline == NULL) {
-        LOG_ERROR("Couldn't setup graphics pipeline.\n");
-        goto fail_destroy_vkdev;
-    }
-
     drmdev = create_and_configure_drmdev();
     if (drmdev == NULL) {
         LOG_ERROR("Couldn't open a KMS device\n");
-        goto fail_destroy_pipeline;
+        goto fail_destroy_vkdev;
     }
 
     drm_fd = drmdev->fd;
     width = drmdev->selected_mode->hdisplay;
     height = drmdev->selected_mode->vdisplay;
 
+    cube_pipeline = cube_pipeline_new(dev, width, height, vk_format);
+    if (cube_pipeline == NULL) {
+        LOG_ERROR("Couldn't setup graphics pipeline.\n");
+        goto fail_destroy_drmdev;
+    }
+
     gbm_device = gbm_create_device(drm_fd);
     if (gbm_device == NULL) {
         LOG_ERROR("Couldn't create GBM device from KMS fd. gbm_create_device: %s\n", strerror(errno));
-        goto fail_close_drm_fd;
+        goto fail_destroy_pipeline;
     }
 
     for (int i = 0; i < 4; i++) {
@@ -2015,17 +2015,19 @@ struct vkkmscube *vkkmscube_new() {
     cube->drm_fd = drm_fd;
     cube->gbm_device = gbm_device;
     cube->drmdev = drmdev;
+    cube->width = width;
+    cube->height = height;
     return cube;
 
 
     fail_destroy_gbm_device:
     gbm_device_destroy(gbm_device);
 
-    fail_close_drm_fd:
-    close(drm_fd);
-
     fail_destroy_pipeline:
     cube_pipeline_destroy(cube_pipeline, dev->device);
+
+    fail_destroy_drmdev:
+    close(drmdev->fd);
 
     fail_destroy_vkdev:
     vkdev_destroy(dev);
@@ -2038,32 +2040,33 @@ struct vkkmscube *vkkmscube_new() {
 void vkkmscube_loop(struct vkkmscube *cube) {
     struct timeval start_time;
     VkResult vk_res;
+    VkFence fence;
     int i, ok;
 
-    LOG_DEBUG("looping\n");
+    vk_res = vkCreateFence(
+        cube->vkdev->device,
+        &(const VkFenceCreateInfo) {
+            .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+            .flags = 0,
+            .pNext = NULL
+        },
+        NULL,
+        &fence
+    );
+    if (vk_res != VK_SUCCESS) {
+        LOG_VK_ERROR(vk_res, "Couldn't create fence to wait for rendering to complete. vkCreateFence");
+        return;
+    }
 
     gettimeofday(&start_time, NULL);
 
+    LOG_DEBUG("looping\n");
+
     i = 0;
     while (1) {
-        VkFence fence;
-
-        cube_gpu_buffer_update_transforms(cube->images[i].gpubuf, start_time, 480 / 800.0f);
-
-        vk_res = vkCreateFence(
-            cube->vkdev->device,
-            &(const VkFenceCreateInfo) {
-                .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-                .flags = 0,
-                .pNext = NULL
-            },
-            NULL,
-            &fence
-        );
-        if (vk_res != VK_SUCCESS) {
-            LOG_VK_ERROR(vk_res, "Couldn't create fence to wait for rendering to complete. vkCreateFence");
-            break;
-        }
+        LOG_DEBUG("update\n");
+        
+        cube_gpu_buffer_update_transforms(cube->images[i].gpubuf, start_time, cube->height / (float) cube->width);
 
         vk_res = vkQueueSubmit(
             cube->vkdev->graphics_queue,
@@ -2089,6 +2092,12 @@ void vkkmscube_loop(struct vkkmscube *cube) {
         vk_res = vkWaitForFences(cube->vkdev->device, 1, &fence, VK_TRUE, UINT64_MAX);
         if (vk_res != VK_SUCCESS) {
             LOG_VK_ERROR(vk_res, "Couldn't wait for rendering to complete. vkWaitForFences");
+            break;
+        }
+
+        vk_res = vkResetFences(cube->vkdev->device, 1, &fence);
+        if (vk_res != VK_SUCCESS) {
+            LOG_VK_ERROR(vk_res, "Couldn't reset rendering fence. vkResetFences");
             break;
         }
 
